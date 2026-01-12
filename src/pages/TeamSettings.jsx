@@ -21,9 +21,6 @@ function TeamSettings() {
     }
   };
 
-  // Filter out allHands since it's not a team
-  const teamEntries = Object.entries(teams).filter(([teamId]) => teamId !== 'allHands');
-
   return (
     <div className="team-settings-container">
       <div className="settings-header">
@@ -33,7 +30,7 @@ function TeamSettings() {
 
       <div className="settings-content">
         <div className="teams-grid">
-          {teamEntries.map(([teamId, team]) => (
+          {Object.entries(teams).map(([teamId, team]) => (
             <div key={teamId} className="team-card">
               <div className="team-card-header" style={{ backgroundColor: team.color }}>
                 <h3>{team.name}</h3>

@@ -14,18 +14,27 @@ const DEFAULT_TEAMS = {
   teamA: { name: 'Team A', color: '#4A90E2' },
   teamB: { name: 'Team B', color: '#E94B3C' },
   teamC: { name: 'Team C', color: '#50C878' },
-  teamD: { name: 'Team D', color: '#9B59B6' }
-};
-
-const ALL_HANDS_CONFIG = {
-  name: 'All Hands',
-  color: '#95A5A6'
+  teamD: { name: 'Team D', color: '#9B59B6' },
+  rndEvents: { name: 'R&D Events', color: '#95A5A6' }
 };
 
 export const TeamProvider = ({ children }) => {
   const [teams, setTeams] = useState(() => {
     const savedTeams = localStorage.getItem('patagonia-teams');
-    return savedTeams ? JSON.parse(savedTeams) : DEFAULT_TEAMS;
+    if (savedTeams) {
+      const parsed = JSON.parse(savedTeams);
+      // Check if it has the old allHands entry and remove it
+      if (parsed.allHands) {
+        delete parsed.allHands;
+      }
+      // Add rndEvents if it doesn't exist
+      if (!parsed.rndEvents) {
+        parsed.rndEvents = DEFAULT_TEAMS.rndEvents;
+      }
+      localStorage.setItem('patagonia-teams', JSON.stringify(parsed));
+      return parsed;
+    }
+    return DEFAULT_TEAMS;
   });
 
   useEffect(() => {
@@ -45,7 +54,7 @@ export const TeamProvider = ({ children }) => {
   };
 
   return (
-    <TeamContext.Provider value={{ teams, updateTeam, resetTeams, allHands: ALL_HANDS_CONFIG }}>
+    <TeamContext.Provider value={{ teams, updateTeam, resetTeams }}>
       {children}
     </TeamContext.Provider>
   );

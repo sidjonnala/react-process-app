@@ -56,5 +56,10 @@
 .main-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
+}
+
+.main-content.weekly-schedule-view {
+  height: calc(100vh - 70px);
+  overflow: hidden;
 }
