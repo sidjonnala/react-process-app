@@ -14,14 +14,15 @@
 .nav-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 1rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .nav-logo {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: bold;
   color: white;
   text-decoration: none;
@@ -33,7 +34,8 @@
 .nav-menu {
   display: flex;
   list-style: none;
-  gap: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .nav-item {
@@ -44,9 +46,12 @@
   color: white;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 4px;
   transition: background-color 0.3s ease;
+  font-size: 0.9rem;
+  display: block;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -56,10 +61,41 @@
 .main-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .main-content.weekly-schedule-view {
   height: calc(100vh - 70px);
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .nav-container {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .nav-logo {
+    font-size: 1.1rem;
+  }
+  
+  .nav-menu {
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+  
+  .nav-link {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .main-content {
+    padding: 0.5rem;
+  }
+  
+  .main-content.weekly-schedule-view {
+    height: calc(100vh - 100px);
+    padding: 0.25rem;
+  }
 }
