@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const EventContext = createContext();
 
@@ -70,36 +72,127 @@ export const EventProvider = ({ children }) => {
     const savedEvents = localStorage.getItem('patagonia-events');
     return savedEvents ? JSON.parse(savedEvents) : DEFAULT_EVENTS;
   });
+  const [useFirebase, setUseFirebase] = useState(false);
 
+  // Try to initialize Firebase connection
   useEffect(() => {
-    localStorage.setItem('patagonia-events', JSON.stringify(events));
-  }, [events]);
+    const checkFirebase = async () => {
+      try {
+        // Check if Firebase is configured
+        if (db) {
+          setUseFirebase(true);
+          console.log('✅ Firebase connected - syncing data');
+        }
+      } catch (error) {
+        console.log('📦 Using localStorage - Firebase not configured');
+        setUseFirebase(false);
+      }
+    };
+    checkFirebase();
+  }, []);
 
-  const addEvent = (event) => {
+  // Subscribe to Firebase changes in real-time
+  useEffect(() => {
+    if (!useFirebase) return;
+
+    const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
+      const firebaseEvents = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      }));
+      
+      if (firebaseEvents.length > 0) {
+        setEvents(firebaseEvents);
+        localStorage.setItem('patagonia-events', JSON.stringify(firebaseEvents));
+      }
+    }, (error) => {
+      console.error('Firebase sync error:', error);
+      setUseFirebase(false);
+    });
+
+    return () => unsubscribe();
+  }, [useFirebase]);
+
+  // Fallback: Save to localStorage only if Firebase is not enabled
+  useEffect(() => {
+    if (!useFirebase) {
+      localStorage.setItem('patagonia-events', JSON.stringify(events));
+    }
+  }, [events, useFirebase]);
+
+  const addEvent = async (event) => {
     const newEvent = {
       ...event,
-      id: Math.max(0, ...events.map(e => e.id)) + 1
+      id: String(Math.max(0, ...events.map(e => Number(e.id) || 0)) + 1)
     };
-    setEvents(prev => [...prev, newEvent]);
+    
+    if (useFirebase) {
+      try {
+        await setDoc(doc(db, 'events', newEvent.id), newEvent);
+      } catch (error) {
+        console.error('Error adding event to Firebase:', error);
+        setEvents(prev => [...prev, newEvent]);
+      }
+    } else {
+      setEvents(prev => [...prev, newEvent]);
+    }
   };
 
-  const updateEvent = (eventId, updates) => {
-    setEvents(prev => prev.map(event => 
-      event.id === eventId ? { ...event, ...updates } : event
-    ));
+  const updateEvent = async (eventId, updates) => {
+    if (useFirebase) {
+      try {
+        const event = events.find(e => e.id === eventId);
+        await setDoc(doc(db, 'events', String(eventId)), { ...event, ...updates });
+      } catch (error) {
+        console.error('Error updating event in Firebase:', error);
+        setEvents(prev => prev.map(event => 
+          event.id === eventId ? { ...event, ...updates } : event
+        ));
+      }
+    } else {
+      setEvents(prev => prev.map(event => 
+        event.id === eventId ? { ...event, ...updates } : event
+      ));
+    }
   };
 
-  const deleteEvent = (eventId) => {
-    setEvents(prev => prev.filter(event => event.id !== eventId));
+  const deleteEvent = async (eventId) => {
+    if (useFirebase) {
+      try {
+        await deleteDoc(doc(db, 'events', String(eventId)));
+      } catch (error) {
+        console.error('Error deleting event from Firebase:', error);
+        setEvents(prev => prev.filter(event => event.id !== eventId));
+      }
+    } else {
+      setEvents(prev => prev.filter(event => event.id !== eventId));
+    }
   };
 
-  const resetEvents = () => {
-    setEvents(DEFAULT_EVENTS);
-    localStorage.setItem('patagonia-events', JSON.stringify(DEFAULT_EVENTS));
+  const resetEvents = async () => {
+    if (useFirebase) {
+      try {
+        // Delete all existing events
+        const snapshot = await getDocs(collection(db, 'events'));
+        await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+        
+        // Add default events
+        await Promise.all(DEFAULT_EVENTS.map(event =>
+          setDoc(doc(db, 'events', String(event.id)), event)
+        ));
+      } catch (error) {
+        console.error('Error resetting events in Firebase:', error);
+        setEvents(DEFAULT_EVENTS);
+        localStorage.setItem('patagonia-events', JSON.stringify(DEFAULT_EVENTS));
+      }
+    } else {
+      setEvents(DEFAULT_EVENTS);
+      localStorage.setItem('patagonia-events', JSON.stringify(DEFAULT_EVENTS));
+    }
   };
 
   return (
-    <EventContext.Provider value={{ events, addEvent, updateEvent, deleteEvent, resetEvents }}>
+    <EventContext.Provider value={{ events, addEvent, updateEvent, deleteEvent, resetEvents, useFirebase }}>
       {children}
     </EventContext.Provider>
   );

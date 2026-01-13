@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const TeamContext = createContext();
 
@@ -36,25 +38,84 @@ export const TeamProvider = ({ children }) => {
     }
     return DEFAULT_TEAMS;
   });
+  const [useFirebase, setUseFirebase] = useState(false);
 
+  // Try to initialize Firebase connection
   useEffect(() => {
-    localStorage.setItem('patagonia-teams', JSON.stringify(teams));
-  }, [teams]);
+    const checkFirebase = async () => {
+      try {
+        if (db) {
+          setUseFirebase(true);
+          console.log('✅ Firebase connected for teams');
+        }
+      } catch (error) {
+        console.log('📦 Using localStorage for teams');
+        setUseFirebase(false);
+      }
+    };
+    checkFirebase();
+  }, []);
 
-  const updateTeam = (teamId, updates) => {
-    setTeams(prev => ({
-      ...prev,
-      [teamId]: { ...prev[teamId], ...updates }
-    }));
+  // Subscribe to Firebase changes
+  useEffect(() => {
+    if (!useFirebase) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'config', 'teams'), (doc) => {
+      if (doc.exists()) {
+        const firebaseTeams = doc.data();
+        setTeams(firebaseTeams);
+        localStorage.setItem('patagonia-teams', JSON.stringify(firebaseTeams));
+      }
+    }, (error) => {
+      console.error('Firebase teams sync error:', error);
+      setUseFirebase(false);
+    });
+
+    return () => unsubscribe();
+  }, [useFirebase]);
+
+  // Fallback: Save to localStorage if Firebase not enabled
+  useEffect(() => {
+    if (!useFirebase) {
+      localStorage.setItem('patagonia-teams', JSON.stringify(teams));
+    }
+  }, [teams, useFirebase]);
+
+  const updateTeam = async (teamId, updates) => {
+    const updatedTeams = {
+      ...teams,
+      [teamId]: { ...teams[teamId], ...updates }
+    };
+
+    if (useFirebase) {
+      try {
+        await setDoc(doc(db, 'config', 'teams'), updatedTeams);
+      } catch (error) {
+        console.error('Error updating team in Firebase:', error);
+        setTeams(updatedTeams);
+      }
+    } else {
+      setTeams(updatedTeams);
+    }
   };
 
-  const resetTeams = () => {
-    setTeams(DEFAULT_TEAMS);
-    localStorage.setItem('patagonia-teams', JSON.stringify(DEFAULT_TEAMS));
+  const resetTeams = async () => {
+    if (useFirebase) {
+      try {
+        await setDoc(doc(db, 'config', 'teams'), DEFAULT_TEAMS);
+      } catch (error) {
+        console.error('Error resetting teams in Firebase:', error);
+        setTeams(DEFAULT_TEAMS);
+        localStorage.setItem('patagonia-teams', JSON.stringify(DEFAULT_TEAMS));
+      }
+    } else {
+      setTeams(DEFAULT_TEAMS);
+      localStorage.setItem('patagonia-teams', JSON.stringify(DEFAULT_TEAMS));
+    }
   };
 
   return (
-    <TeamContext.Provider value={{ teams, updateTeam, resetTeams }}>
+    <TeamContext.Provider value={{ teams, updateTeam, resetTeams, useFirebase }}>
       {children}
     </TeamContext.Provider>
   );
