@@ -152,6 +152,50 @@ function DynamicCalendar() {
     return duration * 200; // 200px per hour (50px per 15min slot)
   };
 
+  // Check if two events overlap
+  const eventsOverlap = (event1, event2) => {
+    const end1 = event1.startTime + event1.duration;
+    const end2 = event2.startTime + event2.duration;
+    return !(event1.startTime >= end2 || end1 <= event2.startTime);
+  };
+
+  // Get position info for an event considering only its overlapping neighbors
+  const getEventPosition = (event, displayDayIndex) => {
+    const actualDayIndex = currentWeekIndices[displayDayIndex];
+    const dayEvents = events.filter(e => e.dayIndex === actualDayIndex);
+    
+    // Find all events that overlap with this specific event
+    const overlapping = dayEvents.filter(e => 
+      e.id !== event.id && eventsOverlap(e, event)
+    );
+    
+    if (overlapping.length === 0) {
+      // No overlap, use full width
+      return { left: 0, width: 100, totalOverlapping: 1 };
+    }
+    
+    // Sort overlapping events by start time, then by id for consistency
+    const allOverlapping = [event, ...overlapping].sort((a, b) => {
+      if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+      // Compare IDs as strings or numbers
+      if (typeof a.id === 'string' && typeof b.id === 'string') {
+        return a.id.localeCompare(b.id);
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+    
+    const position = allOverlapping.findIndex(e => e.id === event.id);
+    const totalColumns = allOverlapping.length;
+    const widthPercent = 100 / totalColumns;
+    const leftPercent = position * widthPercent;
+    
+    return {
+      left: leftPercent,
+      width: widthPercent,
+      totalOverlapping: totalColumns
+    };
+  };
+
   return (
     <div className="w-full bg-white p-2 rounded-xl shadow-lg flex flex-col h-full overflow-hidden max-md:p-1 max-md:rounded-lg">
       <div className="flex gap-2 mb-2 justify-between items-center flex-shrink-0 flex-wrap max-md:gap-1 max-md:mb-1">
@@ -222,13 +266,18 @@ function DynamicCalendar() {
                       const height = calculateEventHeight(event.duration);
                       const tooltipText = `${teamConfig.name} - ${event.title}\n${formatTime(event.startTime)} - ${formatTime(event.startTime + event.duration)}\n${getDurationText(event.duration)}\n${event.frequency || ''}`;
                       
+                      const position = getEventPosition(event, dayIndex);
+                      
                       return (
                         <div
                           key={event.id}
-                          className="absolute left-0.5 right-0.5 top-0.5 p-1.5 rounded-md text-white text-xs cursor-move shadow-md transition-all duration-200 overflow-hidden z-10 whitespace-nowrap text-ellipsis hover:scale-[1.02] hover:shadow-lg hover:z-20 hover:overflow-visible hover:whitespace-normal max-md:text-[0.6rem] max-md:p-1"
+                          className="absolute top-0.5 p-1.5 rounded-md text-white text-xs cursor-move shadow-md transition-all duration-200 overflow-hidden z-10 whitespace-nowrap text-ellipsis hover:scale-[1.02] hover:shadow-lg hover:z-20 hover:overflow-visible hover:whitespace-normal max-md:text-[0.6rem] max-md:p-1"
                           style={{
                             backgroundColor: teamConfig.color,
-                            height: `${height}px`
+                            height: `${height}px`,
+                            left: `${position.left}%`,
+                            width: `calc(${position.width}% - 4px)`,
+                            marginLeft: '2px'
                           }}
                           draggable
                           onDragStart={(e) => handleDragStart(e, event)}
