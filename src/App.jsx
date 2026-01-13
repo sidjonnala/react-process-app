@@ -1,15 +1,49 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { TeamProvider } from './context/TeamContext';
 import { EventProvider } from './context/EventContext';
 import WeeklySchedule from './pages/WeeklySchedule';
 import StoryPointing from './pages/StoryPointing';
 import TeamSettings from './pages/TeamSettings';
+import AdminPanel from './pages/AdminPanel';
 import Home from './pages/Home';
+import Login from './components/Login';
+import PendingApproval from './components/PendingApproval';
+
+// Admin email - update this with your email
+const ADMIN_EMAIL = 'sidharth@patagoniahealth.com';
 
 function AppContent() {
   const location = useLocation();
+  const { user, userProfile, signOut, loading } = useAuth();
   const isWeeklySchedule = location.pathname === '/weeklyschedule';
+  const isAdmin = user && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  // Debug logging
+  console.log('User email:', user?.email);
+  console.log('Is Admin:', isAdmin);
+  console.log('Current path:', location.pathname);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">🗓️</div>
+          <div className="text-xl text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  // Show pending approval screen for non-approved users (except admin)
+  if (!isAdmin && userProfile && !userProfile.approved) {
+    return <PendingApproval />;
+  }
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -39,6 +73,21 @@ function AppContent() {
                 Team Settings
               </Link>
             </li>
+            {isAdmin && (
+              <li>
+                <Link to="/admin" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
+                  👤 Admin
+                </Link>
+              </li>
+            )}
+            <li>
+              <button 
+                onClick={signOut}
+                className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs"
+              >
+                Sign Out
+              </button>
+            </li>
           </ul>
         </div>
       </nav>
@@ -49,6 +98,7 @@ function AppContent() {
           <Route path="/weeklyschedule" element={<WeeklySchedule />} />
           <Route path="/storypointing" element={<StoryPointing />} />
           <Route path="/teamsettings" element={<TeamSettings />} />
+          <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Home />} />
         </Routes>
       </main>
     </div>
@@ -57,13 +107,15 @@ function AppContent() {
 
 function App() {
   return (
-    <TeamProvider>
-      <EventProvider>
-        <Router basename="/react-process-app">
-          <AppContent />
-        </Router>
-      </EventProvider>
-    </TeamProvider>
+    <AuthProvider>
+      <TeamProvider>
+        <EventProvider>
+          <Router basename="/react-process-app">
+            <AppContent />
+          </Router>
+        </EventProvider>
+      </TeamProvider>
+    </AuthProvider>
   );
 }
 
