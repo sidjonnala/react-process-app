@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTeams } from '../context/TeamContext';
 import { useEvents } from '../context/EventContext';
-import './DynamicCalendar.css';
 
 const DAYS = [
   { name: 'Monday', week: 1, label: 'Week 1 - Monday' },
@@ -154,58 +153,58 @@ function DynamicCalendar() {
   };
 
   return (
-    <div className="dynamic-calendar-container">
-      <div className="calendar-controls">
-        <div className="week-navigation">
+    <div className="w-full bg-white p-2 rounded-xl shadow-lg flex flex-col h-full overflow-hidden max-md:p-1 max-md:rounded-lg">
+      <div className="flex gap-2 mb-2 justify-between items-center flex-shrink-0 flex-wrap max-md:gap-1 max-md:mb-1">
+        <div className="flex gap-2 items-center flex-wrap max-md:w-full max-md:justify-center max-md:gap-1">
           <button 
             onClick={() => handleWeekChange(1)} 
-            className={`week-btn ${currentWeek === 1 ? 'active' : ''}`}
+            className={`px-3 py-1.5 border-none rounded-lg font-semibold cursor-pointer transition-all duration-200 text-white text-xs whitespace-nowrap bg-gradient-to-r from-indigo-500 to-purple-600 ${currentWeek === 1 ? 'bg-gray-500 cursor-default' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-400/40'} disabled:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-60 max-md:px-2 max-md:py-1.5 max-md:text-[0.7rem]`}
             disabled={currentWeek === 1}
           >
             ← Week 1
           </button>
-          <span className="week-indicator">Sprint Week {currentWeek}</span>
+          <span className="font-bold text-sm text-gray-800 min-w-[100px] text-center max-md:text-xs max-md:min-w-[90px]">Sprint Week {currentWeek}</span>
           <button 
             onClick={() => handleWeekChange(2)} 
-            className={`week-btn ${currentWeek === 2 ? 'active' : ''}`}
+            className={`px-3 py-1.5 border-none rounded-lg font-semibold cursor-pointer transition-all duration-200 text-white text-xs whitespace-nowrap bg-gradient-to-r from-indigo-500 to-purple-600 ${currentWeek === 2 ? 'bg-gray-500 cursor-default' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-400/40'} disabled:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-60 max-md:px-2 max-md:py-1.5 max-md:text-[0.7rem]`}
             disabled={currentWeek === 2}
           >
             Week 2 →
           </button>
         </div>
-        <div className="action-buttons">
-          <button onClick={() => setShowAddModal(true)} className="add-event-btn">
+        <div className="flex gap-2 flex-wrap max-md:w-full max-md:justify-center">
+          <button onClick={() => setShowAddModal(true)} className="px-4 py-2 border-none rounded-lg font-semibold cursor-pointer transition-all duration-200 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-300/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-400/40 whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-[0.7rem] max-md:flex-1">
             ➕ Add Event
           </button>
-          <button onClick={resetEvents} className="reset-btn">
+          <button onClick={resetEvents} className="px-4 py-2 border-none rounded-lg font-semibold cursor-pointer transition-all duration-200 text-sm bg-red-600 text-white shadow-md shadow-red-300/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-400/40 whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-[0.7rem] max-md:flex-1">
             🔄 Reset to Defaults
           </button>
         </div>
       </div>
 
-      <div className="calendar-legend">
+      <div className="flex gap-2 mb-2 flex-wrap p-1.5 bg-gray-50 rounded-lg text-xs flex-shrink-0 justify-center max-md:gap-1.5 max-md:p-1 max-md:text-[0.7rem]">
         {Object.entries(teams).map(([teamId, team]) => (
-          <div key={teamId} className="legend-item">
-            <div className="legend-color" style={{ backgroundColor: team.color }}></div>
+          <div key={teamId} className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded flex-shrink-0 max-md:w-3.5 max-md:h-3.5" style={{ backgroundColor: team.color }}></div>
             <span>{team.name}</span>
           </div>
         ))}
       </div>
 
-      <div className="calendar-grid">
-        <div className="calendar-header">
-          <div className="time-column-header">Time</div>
+      <div className="overflow-hidden border-2 border-gray-300 rounded-lg flex-1 flex flex-col min-h-0 text-xs max-md:text-[0.75rem]">
+        <div className="grid grid-cols-[100px_repeat(5,1fr)] bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold sticky top-0 z-[100]">
+          <div className="p-3 text-center border-r border-white/30 text-sm max-md:text-xs">Time</div>
           {currentWeekDays.map((day, index) => (
-            <div key={index} className="day-header">
-              <div className="day-name">{day.name}</div>
+            <div key={index} className="p-3 text-center border-r border-white/30 flex flex-col justify-center">
+              <div className="text-sm font-bold max-md:text-xs">{day.name}</div>
             </div>
           ))}
         </div>
 
-        <div className="calendar-body" ref={calendarBodyRef}>
+        <div className="bg-white overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:rounded [&::-webkit-scrollbar-thumb]:bg-indigo-500 [&::-webkit-scrollbar-thumb]:rounded hover:[&::-webkit-scrollbar-thumb]:bg-purple-600" ref={calendarBodyRef}>
           {TIME_SLOTS.map((timeSlot, timeIndex) => (
-            <div key={timeIndex} className="time-row">
-              <div className="time-label">{formatTime(timeSlot)}</div>
+            <div key={timeIndex} className="grid grid-cols-[100px_repeat(5,1fr)] min-h-[50px] border-b border-gray-300 max-md:min-h-[40px]">
+              <div className="p-1 text-center font-semibold text-gray-600 bg-gray-50 border-r-2 border-gray-300 flex items-start justify-center text-xs sticky left-0 z-10">{formatTime(timeSlot)}</div>
               {currentWeekDays.map((day, dayIndex) => {
                 const slotEvents = getEventsForSlot(dayIndex, timeSlot);
                 const isFirstSlotForEvent = (event) => event.startTime === timeSlot;
@@ -213,7 +212,7 @@ function DynamicCalendar() {
                 return (
                   <div
                     key={dayIndex}
-                    className="calendar-cell"
+                    className="border-r border-gray-300 relative cursor-pointer transition-colors duration-200 hover:bg-gray-50"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, dayIndex, timeSlot)}
                     onDoubleClick={() => handleAddEvent(dayIndex, timeSlot)}
@@ -226,7 +225,7 @@ function DynamicCalendar() {
                       return (
                         <div
                           key={event.id}
-                          className="calendar-event"
+                          className="absolute left-0.5 right-0.5 top-0.5 p-1.5 rounded-md text-white text-xs cursor-move shadow-md transition-all duration-200 overflow-hidden z-10 whitespace-nowrap text-ellipsis hover:scale-[1.02] hover:shadow-lg hover:z-20 hover:overflow-visible hover:whitespace-normal max-md:text-[0.6rem] max-md:p-1"
                           style={{
                             backgroundColor: teamConfig.color,
                             height: `${height}px`
@@ -236,13 +235,13 @@ function DynamicCalendar() {
                           onClick={() => handleEditEvent(event)}
                           title={tooltipText}
                         >
-                          <div className="event-title">{event.title}</div>
-                          <div className="event-team">{teamConfig.name}</div>
-                          <div className="event-time">
+                          <div className="font-bold mb-0.5 text-xs overflow-hidden text-ellipsis max-md:text-[0.65rem]">{event.title}</div>
+                          <div className="text-[0.7rem] opacity-90 overflow-hidden text-ellipsis max-md:text-[0.55rem]">{teamConfig.name}</div>
+                          <div className="text-[0.65rem] mt-0.5 overflow-hidden text-ellipsis max-md:text-[0.55rem]">
                             {formatTime(event.startTime)} - {formatTime(event.startTime + event.duration)}
                           </div>
-                          <div className="event-duration">({getDurationText(event.duration)})</div>
-                          {event.frequency && <div className="event-frequency">{event.frequency}</div>}
+                          <div className="text-[0.6rem] italic opacity-80 overflow-hidden text-ellipsis max-md:text-[0.55rem]">({getDurationText(event.duration)})</div>
+                          {event.frequency && <div className="text-[0.6rem] mt-0.5 opacity-90 overflow-hidden text-ellipsis max-md:text-[0.55rem]">{event.frequency}</div>}
                         </div>
                       );
                     })}
@@ -268,8 +267,8 @@ function DynamicCalendar() {
         />
       )}
 
-      <div className="calendar-instructions">
-        <p>💡 <strong>Tip:</strong> Double-click a cell to add an event, drag events to move them, click an event to edit. Scroll down to see more time slots (6 AM - 5 PM). 2-week sprint cycle shown.</p>
+      <div className="mt-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded text-blue-900 text-xs flex-shrink-0 max-md:text-[0.75rem] max-md:p-1.5">
+        <p className="m-0">💡 <strong>Tip:</strong> Double-click a cell to add an event, drag events to move them, click an event to edit. Scroll down to see more time slots (6 AM - 5 PM). 2-week sprint cycle shown.</p>
       </div>
     </div>
   );
@@ -291,16 +290,17 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>{event ? 'Edit Event' : 'Add New Event'}</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] max-md:p-2" onClick={onClose}>
+      <div className="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-[90%] max-h-[90vh] overflow-y-auto max-md:w-[95%] max-md:p-4 max-md:max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-6 text-gray-800 max-md:text-xl">{event ? 'Edit Event' : 'Add New Event'}</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Team</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Team</label>
             <select
               value={formData.teamId}
               onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
               required
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
               {Object.entries(teams).map(([id, team]) => (
                 <option key={id} value={id}>{team.name}</option>
@@ -308,22 +308,24 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Event Title</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Event Title</label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             />
           </div>
 
-          <div className="form-group">
-            <label>Day</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Day</label>
             <select
               value={formData.dayIndex}
               onChange={(e) => setFormData({ ...formData, dayIndex: parseInt(e.target.value) })}
               required
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
               {DAYS.map((day, index) => (
                 <option key={index} value={index}>{day.label}</option>
@@ -331,12 +333,13 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Start Time</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Start Time</label>
             <select
               value={formData.startTime}
               onChange={(e) => setFormData({ ...formData, startTime: parseFloat(e.target.value) })}
               required
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
               {TIME_SLOTS.map((time) => (
                 <option key={time} value={time}>{formatTime(time)}</option>
@@ -344,12 +347,13 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Duration (hours)</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Duration (hours)</label>
             <select
               value={formData.duration}
               onChange={(e) => setFormData({ ...formData, duration: parseFloat(e.target.value) })}
               required
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
               <option value={0.25}>15 minutes</option>
               <option value={0.5}>30 minutes</option>
@@ -364,11 +368,12 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Frequency</label>
+          <div className="mb-6 max-md:mb-4">
+            <label className="block mb-2 font-semibold text-gray-800 max-md:text-sm">Frequency</label>
             <select
               value={formData.frequency}
               onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+              className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
               <option value="Daily">Daily</option>
               <option value="Weekly">Weekly</option>
@@ -377,16 +382,16 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
             </select>
           </div>
 
-          <div className="modal-actions">
+          <div className="flex gap-4 justify-end mt-8 max-md:mt-6">
             {onDelete && (
-              <button type="button" onClick={onDelete} className="delete-btn">
+              <button type="button" onClick={onDelete} className="px-6 py-3 border-none rounded-lg font-semibold cursor-pointer transition-transform duration-200 bg-red-600 text-white hover:-translate-y-0.5 mr-auto max-md:px-4 max-md:py-2.5 max-md:text-sm">
                 Delete
               </button>
             )}
-            <button type="button" onClick={onClose} className="cancel-btn">
+            <button type="button" onClick={onClose} className="px-6 py-3 border-none rounded-lg font-semibold cursor-pointer transition-transform duration-200 bg-gray-500 text-white hover:-translate-y-0.5 max-md:px-4 max-md:py-2.5 max-md:text-sm">
               Cancel
             </button>
-            <button type="submit" className="save-btn">
+            <button type="submit" className="px-6 py-3 border-none rounded-lg font-semibold cursor-pointer transition-transform duration-200 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:-translate-y-0.5 max-md:px-4 max-md:py-2.5 max-md:text-sm">
               {event ? 'Update' : 'Add'}
             </button>
           </div>
