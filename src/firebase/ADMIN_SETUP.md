@@ -2,57 +2,64 @@
 
 This script helps you set up the initial admin user in Firestore.
 
-## Option 1: Using Firebase Console (Recommended)
+## Setting Up the First Admin
+
+### Option 1: Using Firebase Console (Recommended)
 
 1. Sign up with your admin email in the app first
 2. Go to Firebase Console: https://console.firebase.google.com/
 3. Select project: **patagonia-rnd-hub**
 4. Navigate to **Firestore Database**
 5. Find the **users** collection
-6. Find your user document (identified by UID or email)
-7. Edit the document and change `approved` field to `true`
+6. Find your user document (identified by UID)
+7. Edit the document and set these fields:
+   - `approved`: `true`
+   - `isAdmin`: `true`
 8. Save changes
+9. Refresh the app - you should now see the "Admin" link in the navigation
 
-## Option 2: Using Firestore REST API
-
-You can use curl or any HTTP client to update the user document:
-
-```bash
-# Replace {PROJECT_ID}, {USER_UID}, and {DATABASE} with your values
-curl -X PATCH \
-  'https://firestore.googleapis.com/v1/projects/patagonia-rnd-hub/databases/(default)/documents/users/{USER_UID}?updateMask.fieldPaths=approved' \
-  -H 'Authorization: Bearer YOUR_FIREBASE_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "fields": {
-      "approved": {
-        "booleanValue": true
-      }
-    }
-  }'
-```
-
-## Option 3: Manually in Firebase Console
+### Option 2: Manually in Firebase Console
 
 If the users collection doesn't exist yet:
 
-1. Sign in to the app with your admin email
+1. Sign in to the app with your email
 2. You'll see the "Pending Approval" screen
 3. Open Firebase Console → Firestore Database
 4. You should now see a **users** collection
 5. Click on your user document
-6. Click **Edit Field** next to `approved`
-7. Change value from `false` to `true`
+6. Click **Add field**:
+   - Field name: `isAdmin`
+   - Field type: `boolean`
+   - Value: `true`
+7. Edit the `approved` field and change it to `true`
 8. Click **Update**
-9. Refresh your app - you should now have access!
+9. Refresh your app - you should now have admin access!
+
+## Admin Capabilities
+
+Once you're set as admin, you can:
+- Access the Admin Panel at `/admin`
+- View all pending user signups
+- Approve or revoke user access
+- Promote users to admin or demote them
+- Admin users always have access regardless of approval status
+
+## Managing Other Admins
+
+From the Admin Panel, you can:
+1. Approve pending users (green "Approve" button)
+2. Make approved users admins (purple "Make Admin" button)
+3. Remove admin privileges (gray "Remove Admin" button)
+4. Revoke user access (red "Revoke" button)
 
 ## Important Notes
 
-- **Admin Email:** Make sure this matches the email in `src/App.jsx` (currently: `sidjonnala@gmail.com`)
-- The admin user is identified by email address, not by the approved flag
-- Admin users always have access, regardless of approval status
-- The first time you sign in as admin, you'll be auto-approved
-- All other users will need approval from the admin panel
+- **Admin Status:** Determined by `isAdmin: true` flag in user document
+- There is no hardcoded admin email in the code
+- First admin must be set manually in Firebase Console
+- Subsequent admins can be promoted from the Admin Panel
+- Admin users see the 👤 Admin link in navigation
+- Regular approved users do NOT see the Admin link
 
 ## Firestore Security Rules
 

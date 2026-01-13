@@ -43,18 +43,14 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(profile);
             setUser(firebaseUser);
           } else {
-            // Create new user profile
-            // Auto-approve admin user
-            const ADMIN_EMAIL = 'sidjonnala@gmail.com';
-            const isAdmin = firebaseUser.email === ADMIN_EMAIL;
-            
+            // Create new user profile (pending approval by default)
             const newProfile = {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-              approved: isAdmin, // Auto-approve admin
+              approved: false,
+              isAdmin: false,
               createdAt: new Date().toISOString(),
-              uid: firebaseUser.uid,
-              ...(isAdmin && { isAdmin: true })
+              uid: firebaseUser.uid
             };
             await setDoc(userDocRef, newProfile);
             setUserProfile(newProfile);

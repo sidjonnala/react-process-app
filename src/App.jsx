@@ -11,19 +11,11 @@ import Home from './pages/Home';
 import Login from './components/Login';
 import PendingApproval from './components/PendingApproval';
 
-// Admin email - update this with your email
-const ADMIN_EMAIL = 'sidharth@patagoniahealth.com';
-
 function AppContent() {
   const location = useLocation();
   const { user, userProfile, signOut, loading } = useAuth();
   const isWeeklySchedule = location.pathname === '/weeklyschedule';
-  const isAdmin = user && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
-  // Debug logging
-  console.log('User email:', user?.email);
-  console.log('Is Admin:', isAdmin);
-  console.log('Current path:', location.pathname);
+  const isAdmin = userProfile?.isAdmin === true;
 
   if (loading) {
     return (

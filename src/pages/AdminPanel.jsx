@@ -64,6 +64,29 @@ function AdminPanel() {
     }
   };
 
+  const toggleAdmin = async (userId, currentAdminStatus) => {
+    setUpdating(userId);
+    try {
+      const userDoc = doc(db, 'users', userId);
+      await updateDoc(userDoc, {
+        isAdmin: !currentAdminStatus,
+        adminUpdatedAt: new Date().toISOString()
+      });
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId 
+          ? { ...user, isAdmin: !currentAdminStatus, adminUpdatedAt: new Date().toISOString() }
+          : user
+      ));
+    } catch (error) {
+      console.error('Error updating admin status:', error);
+      alert('Failed to update admin status. Check console for details.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const revokeAccess = async (userId) => {
     setUpdating(userId);
     try {
@@ -128,13 +151,15 @@ function AdminPanel() {
                     Signed up: {new Date(user.createdAt).toLocaleString()}
                   </div>
                 </div>
-                <button
-                  onClick={() => approveUser(user.id)}
-                  disabled={updating === user.id}
-                  className="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {updating === user.id ? 'Approving...' : 'Approve'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveUser(user.id)}
+                    disabled={updating === user.id}
+                    className="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating === user.id ? 'Approving...' : 'Approve'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -162,23 +187,39 @@ function AdminPanel() {
                 className="flex items-center justify-between p-4 border-2 border-green-200 bg-green-50 rounded-lg"
               >
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-800">{user.displayName}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-gray-800">{user.displayName}</div>
+                    {user.isAdmin && (
+                      <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                        ADMIN
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-600">{user.email}</div>
                   <div className="text-xs text-gray-500 mt-1">
                     Approved: {new Date(user.approvedAt || user.createdAt).toLocaleString()}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Revoke access for ${user.email}?`)) {
-                      revokeAccess(user.id);
-                    }
-                  }}
-                  disabled={updating === user.id}
-                  className="bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {updating === user.id ? 'Revoking...' : 'Revoke'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleAdmin(user.id, user.isAdmin)}
+                    disabled={updating === user.id}
+                    className={`${user.isAdmin ? 'bg-gradient-to-r from-gray-500 to-gray-600' : 'bg-gradient-to-r from-purple-500 to-purple-600'} text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
+                  >
+                    {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Revoke access for ${user.email}?`)) {
+                        revokeAccess(user.id);
+                      }
+                    }}
+                    disabled={updating === user.id}
+                    className="bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {updating === user.id ? 'Revoking...' : 'Revoke'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
