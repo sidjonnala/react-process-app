@@ -12,7 +12,7 @@ function App() {
   return (
     <TeamProvider>
       <EventProvider>
-        <Router>
+        <Router basename="/react-process-app">
           <div className="app">
             <nav className="navbar">
               <div className="nav-container">
