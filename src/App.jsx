@@ -5,7 +5,6 @@ import { TeamProvider } from './context/TeamContext';
 import { EventProvider } from './context/EventContext';
 import WeeklySchedule from './pages/WeeklySchedule';
 import StoryPointing from './pages/StoryPointing';
-import TeamSettings from './pages/TeamSettings';
 import AdminPanel from './pages/AdminPanel';
 import Home from './pages/Home';
 import Login from './components/Login';
@@ -60,11 +59,6 @@ function AppContent() {
                 Story Pointing
               </Link>
             </li>
-            <li>
-              <Link to="/teamsettings" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
-                Team Settings
-              </Link>
-            </li>
             {isAdmin && (
               <li>
                 <Link to="/admin" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
@@ -89,7 +83,6 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/weeklyschedule" element={<WeeklySchedule />} />
           <Route path="/storypointing" element={<StoryPointing />} />
-          <Route path="/teamsettings" element={<TeamSettings />} />
           <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Home />} />
         </Routes>
       </main>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import TeamSettings from './TeamSettings';
 
 function AdminPanel() {
+  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'teams'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
@@ -125,106 +127,137 @@ function AdminPanel() {
     <div className="max-w-6xl mx-auto p-4">
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">Admin Panel</h2>
-        <p className="text-gray-600">Manage user access to the application</p>
-      </div>
-
-      {/* Pending Users Section */}
-      {pendingUsers.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">⏳</span>
-            <h3 className="text-2xl font-bold text-gray-800">
-              Pending Approval ({pendingUsers.length})
-            </h3>
-          </div>
-          
-          <div className="space-y-3">
-            {pendingUsers.map(user => (
-              <div 
-                key={user.id} 
-                className="flex items-center justify-between p-4 border-2 border-amber-200 bg-amber-50 rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-800">{user.displayName}</div>
-                  <div className="text-sm text-gray-600">{user.email}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Signed up: {new Date(user.createdAt).toLocaleString()}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => approveUser(user.id)}
-                    disabled={updating === user.id}
-                    className="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {updating === user.id ? 'Approving...' : 'Approve'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Approved Users Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl">✅</span>
-          <h3 className="text-2xl font-bold text-gray-800">
-            Approved Users ({approvedUsers.length})
-          </h3>
-        </div>
+        <p className="text-gray-600 mb-4">Manage users and team settings</p>
         
-        {approvedUsers.length === 0 ? (
-          <div className="text-gray-500 text-center py-8">
-            No approved users yet
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {approvedUsers.map(user => (
-              <div 
-                key={user.id} 
-                className="flex items-center justify-between p-4 border-2 border-green-200 bg-green-50 rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-gray-800">{user.displayName}</div>
-                    {user.isAdmin && (
-                      <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                        ADMIN
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">{user.email}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Approved: {new Date(user.approvedAt || user.createdAt).toLocaleString()}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleAdmin(user.id, user.isAdmin)}
-                    disabled={updating === user.id}
-                    className={`${user.isAdmin ? 'bg-gradient-to-r from-gray-500 to-gray-600' : 'bg-gradient-to-r from-purple-500 to-purple-600'} text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
-                  >
-                    {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Revoke access for ${user.email}?`)) {
-                        revokeAccess(user.id);
-                      }
-                    }}
-                    disabled={updating === user.id}
-                    className="bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {updating === user.id ? 'Revoking...' : 'Revoke'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-3 font-semibold transition-colors ${
+              activeTab === 'users'
+                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            👥 User Management
+          </button>
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`px-6 py-3 font-semibold transition-colors ${
+              activeTab === 'teams'
+                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🎨 Team Settings
+          </button>
+        </div>
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'users' ? (
+        <>
+          {/* Pending Users Section */}
+          {pendingUsers.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">⏳</span>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Pending Approval ({pendingUsers.length})
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                {pendingUsers.map(user => (
+                  <div 
+                    key={user.id} 
+                    className="flex items-center justify-between p-4 border-2 border-amber-200 bg-amber-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-800">{user.displayName}</div>
+                      <div className="text-sm text-gray-600">{user.email}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Signed up: {new Date(user.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => approveUser(user.id)}
+                        disabled={updating === user.id}
+                        className="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {updating === user.id ? 'Approving...' : 'Approve'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Approved Users Section */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">✅</span>
+              <h3 className="text-2xl font-bold text-gray-800">
+                Approved Users ({approvedUsers.length})
+              </h3>
+            </div>
+            
+            {approvedUsers.length === 0 ? (
+              <div className="text-gray-500 text-center py-8">
+                No approved users yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {approvedUsers.map(user => (
+                  <div 
+                    key={user.id} 
+                    className="flex items-center justify-between p-4 border-2 border-green-200 bg-green-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-gray-800">{user.displayName}</div>
+                        {user.isAdmin && (
+                          <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            ADMIN
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600">{user.email}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Approved: {new Date(user.approvedAt || user.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleAdmin(user.id, user.isAdmin)}
+                        disabled={updating === user.id}
+                        className={`${user.isAdmin ? 'bg-gradient-to-r from-gray-500 to-gray-600' : 'bg-gradient-to-r from-purple-500 to-purple-600'} text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
+                      >
+                        {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Revoke access for ${user.email}?`)) {
+                            revokeAccess(user.id);
+                          }
+                        }}
+                        disabled={updating === user.id}
+                        className="bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        {updating === user.id ? 'Revoking...' : 'Revoke'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <TeamSettings />
+      )}
     </div>
   );
 }
