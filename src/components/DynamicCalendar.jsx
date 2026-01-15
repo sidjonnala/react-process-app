@@ -44,7 +44,7 @@ const getDurationText = (duration) => {
   return `${duration} hrs`;
 };
 
-function DynamicCalendar() {
+function DynamicCalendar({ selectedTeams = [] }) {
   const { teams } = useTeams();
   const { events, addEvent, updateEvent, deleteEvent, resetEvents } = useEvents();
   const [draggedEvent, setDraggedEvent] = useState(null);
@@ -142,9 +142,15 @@ function DynamicCalendar() {
     const actualDayIndex = currentWeekIndices[displayDayIndex];
     return events.filter(event => {
       const eventEnd = event.startTime + event.duration;
+      const teamConfig = getTeamConfig(event.teamId);
+      
+      // Filter by selected teams
+      const isTeamSelected = selectedTeams.length === 0 || selectedTeams.includes(teamConfig.name);
+      
       return event.dayIndex === actualDayIndex && 
              event.startTime < timeSlot + 0.25 && 
-             eventEnd > timeSlot;
+             eventEnd > timeSlot &&
+             isTeamSelected;
     });
   };
 
@@ -227,12 +233,26 @@ function DynamicCalendar() {
       </div>
 
       <div className="flex gap-2 mb-2 flex-wrap p-1.5 bg-gray-50 rounded-lg text-xs flex-shrink-0 justify-center max-md:gap-1.5 max-md:p-1 max-md:text-[0.7rem]">
-        {Object.entries(teams).map(([teamId, team]) => (
-          <div key={teamId} className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded flex-shrink-0 max-md:w-3.5 max-md:h-3.5" style={{ backgroundColor: team.color }}></div>
-            <span>{team.name}</span>
-          </div>
-        ))}
+        {Object.entries(teams)
+          .sort(([, a], [, b]) => {
+            // R&D Events always goes last
+            if (a.name === 'R&D Events') return 1;
+            if (b.name === 'R&D Events') return -1;
+            // Otherwise alphabetical
+            return a.name.localeCompare(b.name);
+          })
+          .map(([teamId, team]) => {
+            const isSelected = selectedTeams.includes(team.name);
+            return (
+              <div 
+                key={teamId} 
+                className={`flex items-center gap-1.5 transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-30'}`}
+              >
+                <div className="w-4 h-4 rounded flex-shrink-0 max-md:w-3.5 max-md:h-3.5" style={{ backgroundColor: team.color }}></div>
+                <span>{team.name}</span>
+              </div>
+            );
+          })}
       </div>
 
       <div className="overflow-hidden border-2 border-gray-300 rounded-lg flex-1 flex flex-col min-h-0 text-xs max-md:text-[0.75rem]">
