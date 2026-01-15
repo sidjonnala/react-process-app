@@ -5,6 +5,7 @@ import { TeamProvider } from './context/TeamContext';
 import { EventProvider } from './context/EventContext';
 import WeeklySchedule from './pages/WeeklySchedule';
 import StoryPointing from './pages/StoryPointing';
+import TeamSettings from './pages/TeamSettings';
 import AdminPanel from './pages/AdminPanel';
 import Home from './pages/Home';
 import Login from './components/Login';
@@ -16,24 +17,29 @@ function AppContent() {
   const isWeeklySchedule = location.pathname === '/weeklyschedule';
   const isAdmin = userProfile?.isAdmin === true;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🗓️</div>
-          <div className="text-xl text-gray-600">Loading...</div>
+  // TEMPORARY: Skip authentication
+  const SKIP_AUTH = true;
+
+  if (!SKIP_AUTH) {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-6xl mb-4 animate-bounce">🗓️</div>
+            <div className="text-xl text-gray-600">Loading...</div>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!user) {
-    return <Login />;
-  }
+    if (!user) {
+      return <Login />;
+    }
 
-  // Show pending approval screen for non-approved users (except admin)
-  if (!isAdmin && userProfile && !userProfile.approved) {
-    return <PendingApproval />;
+    // Show pending approval screen for non-approved users (except admin)
+    if (!isAdmin && userProfile && !userProfile.approved) {
+      return <PendingApproval />;
+    }
   }
   
   return (
@@ -59,6 +65,7 @@ function AppContent() {
                 Story Pointing
               </Link>
             </li>
+            {/* TEMPORARY: Hide admin link
             {isAdmin && (
               <li>
                 <Link to="/admin" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
@@ -66,6 +73,8 @@ function AppContent() {
                 </Link>
               </li>
             )}
+            */}
+            {/* TEMPORARY: Hide sign out button
             <li>
               <button 
                 onClick={signOut}
@@ -74,6 +83,7 @@ function AppContent() {
                 Sign Out
               </button>
             </li>
+            */}
           </ul>
         </div>
       </nav>
@@ -83,6 +93,8 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/weeklyschedule" element={<WeeklySchedule />} />
           <Route path="/storypointing" element={<StoryPointing />} />
+          <Route path="/teamsettings" element={<TeamSettings />} />
+          {/* TEMPORARY: Keep admin route but hidden from nav */}
           <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Home />} />
         </Routes>
       </main>
