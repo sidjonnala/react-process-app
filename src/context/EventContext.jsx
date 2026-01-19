@@ -138,6 +138,31 @@ export const EventProvider = ({ children }) => {
     }
   };
 
+  const addMultipleEvents = async (eventsToAdd) => {
+    // Calculate starting ID
+    let nextId = Math.max(0, ...events.map(e => Number(e.id) || 0)) + 1;
+    
+    // Create all events with unique IDs
+    const newEvents = eventsToAdd.map((event, index) => ({
+      ...event,
+      id: String(nextId + index)
+    }));
+    
+    if (useFirebase) {
+      try {
+        // Add all events to Firebase
+        await Promise.all(
+          newEvents.map(event => setDoc(doc(db, 'events', event.id), event))
+        );
+      } catch (error) {
+        console.error('Error adding events to Firebase:', error);
+        setEvents(prev => [...prev, ...newEvents]);
+      }
+    } else {
+      setEvents(prev => [...prev, ...newEvents]);
+    }
+  };
+
   const updateEvent = async (eventId, updates) => {
     if (useFirebase) {
       try {
@@ -192,7 +217,7 @@ export const EventProvider = ({ children }) => {
   };
 
   return (
-    <EventContext.Provider value={{ events, addEvent, updateEvent, deleteEvent, resetEvents, useFirebase }}>
+    <EventContext.Provider value={{ events, addEvent, addMultipleEvents, updateEvent, deleteEvent, resetEvents, useFirebase }}>
       {children}
     </EventContext.Provider>
   );

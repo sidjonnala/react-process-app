@@ -46,7 +46,7 @@ const getDurationText = (duration) => {
 
 function DynamicCalendar({ selectedTeams = [] }) {
   const { teams } = useTeams();
-  const { events, addEvent, updateEvent, deleteEvent, resetEvents } = useEvents();
+  const { events, addEvent, addMultipleEvents, updateEvent, deleteEvent, resetEvents } = useEvents();
   const [draggedEvent, setDraggedEvent] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -120,9 +120,68 @@ function DynamicCalendar({ selectedTeams = [] }) {
 
   const handleSaveEvent = (eventData) => {
     if (editingEvent) {
+      // When editing, just update the single event
       updateEvent(editingEvent.id, eventData);
     } else {
-      addEvent({ ...eventData, ...selectedSlot });
+      // When adding new event, handle frequency
+      const { frequency, ...baseEventFields } = eventData;
+      const { dayIndex: selectedDayIndex, timeSlot } = selectedSlot || { dayIndex: eventData.dayIndex, timeSlot: eventData.startTime };
+      
+      const eventsToAdd = [];
+      
+      if (frequency === 'Daily') {
+        // Add event to all 10 days (Mon-Fri for both weeks)
+        DAYS.forEach((day, index) => {
+          eventsToAdd.push({
+            ...baseEventFields,
+            frequency,
+            dayIndex: index,
+            startTime: timeSlot
+          });
+        });
+      } else if (frequency === 'Weekly') {
+        // Add event to same day of week in both weeks
+        const dayOfWeek = selectedDayIndex % 5; // 0-4 (Mon-Fri)
+        
+        // Week 1 occurrence (indices 0-4)
+        eventsToAdd.push({
+          ...baseEventFields,
+          frequency,
+          dayIndex: dayOfWeek,
+          startTime: timeSlot
+        });
+        
+        // Week 2 occurrence (indices 5-9)
+        eventsToAdd.push({
+          ...baseEventFields,
+          frequency,
+          dayIndex: dayOfWeek + 5,
+          startTime: timeSlot
+        });
+      } else if (frequency === 'Bi-weekly' || frequency === 'Monthly') {
+        // Add event only to the selected day (once per 2-week cycle)
+        eventsToAdd.push({
+          ...baseEventFields,
+          frequency,
+          dayIndex: selectedDayIndex,
+          startTime: timeSlot
+        });
+      } else {
+        // Default: just add to selected slot
+        eventsToAdd.push({
+          ...baseEventFields,
+          frequency,
+          dayIndex: selectedDayIndex,
+          startTime: timeSlot
+        });
+      }
+      
+      // Add all events at once using batch function
+      if (eventsToAdd.length > 1) {
+        addMultipleEvents(eventsToAdd);
+      } else {
+        addEvent(eventsToAdd[0]);
+      }
     }
     setShowAddModal(false);
     setEditingEvent(null);
@@ -350,7 +409,7 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
     dayIndex: event?.dayIndex || 0,
     startTime: event?.startTime || 8.0,
     duration: event?.duration || 0.5,
-    frequency: event?.frequency || 'Weekly'
+    frequency: event?.frequency || 'Bi-weekly'
   });
 
   const handleSubmit = (e) => {
@@ -444,11 +503,17 @@ function EventModal({ event, teams, onSave, onDelete, onClose }) {
               onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
               className="w-full p-3 border-2 border-gray-300 rounded-md text-base focus:outline-none focus:border-indigo-500 transition-colors max-md:p-2.5 max-md:text-sm"
             >
-              <option value="Daily">Daily</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Bi-weekly">Bi-weekly</option>
-              <option value="Monthly">Monthly</option>
+              <option value="Daily">Daily (Every day, both weeks)</option>
+              <option value="Weekly">Weekly (Same day, both weeks)</option>
+              <option value="Bi-weekly">Bi-weekly (Once per 2-week sprint)</option>
+              <option value="Monthly">Monthly (Once per 2-week sprint)</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.frequency === 'Daily' && '📅 Event will be added to all 10 days (Mon-Fri both weeks)'}
+              {formData.frequency === 'Weekly' && '📅 Event will be added to the same day in both weeks'}
+              {formData.frequency === 'Bi-weekly' && '📅 Event will be added only to the selected day'}
+              {formData.frequency === 'Monthly' && '📅 Event will be added only to the selected day'}
+            </p>
           </div>
 
           <div className="flex gap-4 justify-end mt-8 max-md:mt-6">
