@@ -41,10 +41,44 @@ You need a Firebase project. The current configuration is set up for:
 
 ### 3. Configure Firestore Security Rules
 
-After enabling Firestore, set up security rules to require authentication:
+After enabling Firestore, set up security rules:
+
+**TEMPORARY (while auth is disabled):**
 
 1. Go to **Firestore Database** > **Rules** tab
 2. Replace the default rules with:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // TEMPORARY: Allow public access while authentication is disabled
+    // TODO: Re-enable authentication and update rules
+    
+    // Planning Poker sessions (temporary public access)
+    match /poker-sessions/{sessionId} {
+      allow read, write: if true;
+    }
+    match /poker-sessions/{sessionId}/votes/{voterId} {
+      allow read, write: if true;
+    }
+    
+    // Users collection (for when auth is re-enabled)
+    match /users/{userId} {
+      allow read, write: if true; // TEMPORARY
+    }
+    
+    // All other data (events, teams, config)
+    match /{document=**} {
+      allow read, write: if true; // TEMPORARY
+    }
+  }
+}
+```
+
+3. Click **Publish**
+
+**PRODUCTION (when auth is re-enabled):**
 
 ```javascript
 rules_version = '2';
@@ -57,6 +91,14 @@ service cloud.firestore {
       allow update: if false; // Only admin can approve users (via Admin Panel)
     }
     
+    // Planning Poker sessions - authenticated users only
+    match /poker-sessions/{sessionId} {
+      allow read, write: if request.auth != null;
+    }
+    match /poker-sessions/{sessionId}/votes/{voterId} {
+      allow read, write: if request.auth != null;
+    }
+    
     // Only approved users can access app data (events, teams, config)
     match /{document=**} {
       allow read, write: if request.auth != null && 
@@ -65,13 +107,6 @@ service cloud.firestore {
   }
 }
 ```
-
-3. Click **Publish**
-
-**Important:** These rules ensure:
-- Users can only read their own profile
-- Only approved users can access app data
-- User approval can only be done through the Admin Panel (which you'll access as admin)
 
 ### 4. Create Firestore Collections
 

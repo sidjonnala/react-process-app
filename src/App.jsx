@@ -7,6 +7,7 @@ import WeeklySchedule from './pages/WeeklySchedule';
 import StoryPointing from './pages/StoryPointing';
 import TeamSettings from './pages/TeamSettings';
 import AdminPanel from './pages/AdminPanel';
+import PlanningPoker from './pages/PlanningPoker';
 import Home from './pages/Home';
 import Login from './components/Login';
 import PendingApproval from './components/PendingApproval';
@@ -93,6 +94,7 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/weeklyschedule" element={<WeeklySchedule />} />
           <Route path="/storypointing" element={<StoryPointing />} />
+          <Route path="/planningpoker" element={<PlanningPoker />} />
           <Route path="/teamsettings" element={<TeamSettings />} />
           {/* TEMPORARY: Keep admin route but hidden from nav */}
           <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Home />} />
