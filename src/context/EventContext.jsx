@@ -61,7 +61,8 @@ const DEFAULT_EVENTS = [
   { id: 207, teamId: 'teamB', title: 'Daily Scrum', dayIndex: 8, startTime: 9.5, duration: 0.25, frequency: 'Daily' },
   { id: 15, teamId: 'teamA', title: 'Sprint Planning', dayIndex: 8, startTime: 9.75, duration: 0.75, frequency: 'Bi-weekly' },
   
-  // Week 2 - Friday (Sprint Planning for all, no Scrums)
+  // Week 2 - Friday (Sprint Planning for all, Daily Scrum for Team A)
+  { id: 208, teamId: 'teamA', title: 'Daily Scrum', dayIndex: 9, startTime: 7.5, duration: 0.25, frequency: 'Daily' },
   { id: 16, teamId: 'teamB', title: 'Sprint Planning', dayIndex: 9, startTime: 7.75, duration: 0.75, frequency: 'Bi-weekly' },
   { id: 17, teamId: 'teamC', title: 'Sprint Planning', dayIndex: 9, startTime: 8.5, duration: 0.75, frequency: 'Bi-weekly' },
   { id: 18, teamId: 'teamD', title: 'Sprint Planning', dayIndex: 9, startTime: 9.25, duration: 0.75, frequency: 'Bi-weekly' },
