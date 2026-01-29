@@ -16,6 +16,7 @@ function AppContent() {
   const location = useLocation();
   const { user, userProfile, signOut, loading } = useAuth();
   const isWeeklySchedule = location.pathname === '/weeklyschedule';
+  const isPlanningPoker = location.pathname === '/planningpoker';
   const isAdmin = userProfile?.isAdmin === true;
 
   // TEMPORARY: Skip authentication
@@ -41,6 +42,11 @@ function AppContent() {
     if (!isAdmin && userProfile && !userProfile.approved) {
       return <PendingApproval />;
     }
+  }
+
+  // Planning Poker standalone view (no navigation)
+  if (isPlanningPoker) {
+    return <PlanningPoker />;
   }
   
   return (
