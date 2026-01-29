@@ -43,42 +43,8 @@ You need a Firebase project. The current configuration is set up for:
 
 After enabling Firestore, set up security rules:
 
-**TEMPORARY (while auth is disabled):**
-
 1. Go to **Firestore Database** > **Rules** tab
 2. Replace the default rules with:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // TEMPORARY: Allow public access while authentication is disabled
-    // TODO: Re-enable authentication and update rules
-    
-    // Planning Poker sessions (temporary public access)
-    match /poker-sessions/{sessionId} {
-      allow read, write: if true;
-    }
-    match /poker-sessions/{sessionId}/votes/{voterId} {
-      allow read, write: if true;
-    }
-    
-    // Users collection (for when auth is re-enabled)
-    match /users/{userId} {
-      allow read, write: if true; // TEMPORARY
-    }
-    
-    // All other data (events, teams, config)
-    match /{document=**} {
-      allow read, write: if true; // TEMPORARY
-    }
-  }
-}
-```
-
-3. Click **Publish**
-
-**PRODUCTION (when auth is re-enabled):**
 
 ```javascript
 rules_version = '2';
@@ -87,16 +53,16 @@ service cloud.firestore {
     // Users can read their own profile
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null; // Allow user creation on signup
-      allow update: if false; // Only admin can approve users (via Admin Panel)
+      allow create: if request.auth != null;
+      allow update: if false; // Only admin can approve users
     }
     
-    // Planning Poker sessions - authenticated users only
+    // Planning Poker sessions - PUBLIC ACCESS (no auth required)
     match /poker-sessions/{sessionId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     match /poker-sessions/{sessionId}/votes/{voterId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     
     // Only approved users can access app data (events, teams, config)
@@ -107,6 +73,14 @@ service cloud.firestore {
   }
 }
 ```
+
+3. Click **Publish**
+
+**Important:** These rules ensure:
+- Users can only read their own profile
+- Planning Poker sessions are publicly accessible (no auth required) - allows anyone with the link to participate
+- All other app data (events, teams, calendar) requires authentication and approval
+- User approval can only be done through the Admin Panel
 
 ### 4. Create Firestore Collections
 

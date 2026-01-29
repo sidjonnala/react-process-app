@@ -19,32 +19,38 @@ function AppContent() {
   const isPlanningPoker = location.pathname === '/planningpoker';
   const isAdmin = userProfile?.isAdmin === true;
 
-  // TEMPORARY: Skip authentication
-  const SKIP_AUTH = true;
+  // Check if viewing a shared Planning Poker session (has session query param)
+  const searchParams = new URLSearchParams(location.search);
+  const hasSessionParam = searchParams.has('session');
+  const isSharedPokerSession = isPlanningPoker && hasSessionParam;
 
-  if (!SKIP_AUTH) {
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-bounce">🗓️</div>
-            <div className="text-xl text-gray-600">Loading...</div>
-          </div>
-        </div>
-      );
-    }
-
-    if (!user) {
-      return <Login />;
-    }
-
-    // Show pending approval screen for non-approved users (except admin)
-    if (!isAdmin && userProfile && !userProfile.approved) {
-      return <PendingApproval />;
-    }
+  // Planning Poker with session link - public access (no auth, no navigation)
+  if (isSharedPokerSession) {
+    return <PlanningPoker />;
   }
 
-  // Planning Poker standalone view (no navigation)
+  // Authentication required for all pages (including Planning Poker without session)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">🗓️</div>
+          <div className="text-xl text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  // Show pending approval screen for non-approved users (except admin)
+  if (!isAdmin && userProfile && !userProfile.approved) {
+    return <PendingApproval />;
+  }
+
+  // Planning Poker without session - authenticated, standalone view (no navigation)
   if (isPlanningPoker) {
     return <PlanningPoker />;
   }
@@ -72,16 +78,20 @@ function AppContent() {
                 Story Pointing
               </Link>
             </li>
-            {/* TEMPORARY: Hide admin link
             {isAdmin && (
-              <li>
-                <Link to="/admin" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
-                  👤 Admin
-                </Link>
-              </li>
+              <>
+                <li>
+                  <Link to="/planningpoker" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
+                    🃏 Planning Poker
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin" className="text-white font-medium px-3 py-2 rounded hover:bg-white/20 transition-colors text-sm md:text-base block whitespace-nowrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
+                    👤 Admin
+                  </Link>
+                </li>
+              </>
             )}
-            */}
-            {/* TEMPORARY: Hide sign out button
             <li>
               <button 
                 onClick={signOut}
@@ -90,7 +100,6 @@ function AppContent() {
                 Sign Out
               </button>
             </li>
-            */}
           </ul>
         </div>
       </nav>
