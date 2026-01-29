@@ -16,6 +16,8 @@ function PlanningPoker() {
   const [votes, setVotes] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [ticketName, setTicketName] = useState('');
+  const [sessionError, setSessionError] = useState(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
 
   // Check URL for session parameter
   useEffect(() => {
@@ -32,15 +34,23 @@ function PlanningPoker() {
   const checkAndLoadSession = async (sessionName) => {
     if (!db) return;
     
+    setIsCheckingSession(true);
+    setSessionError(null);
+    
     try {
       const sessionDocRef = doc(db, 'poker-sessions', sessionName);
       const sessionSnap = await getDoc(sessionDocRef);
       
       if (sessionSnap.exists()) {
         setCurrentSession(sessionSnap.data());
+      } else {
+        setSessionError('Session not found. This session may have ended or the link is invalid.');
       }
     } catch (error) {
       console.error('Error checking session:', error);
+      setSessionError('Error loading session. Please check your connection and try again.');
+    } finally {
+      setIsCheckingSession(false);
     }
   };
 
@@ -60,14 +70,21 @@ function PlanningPoker() {
         setCurrentSession(data);
         setShowResults(data.revealed || false);
         setTicketName(data.ticketName || '');
+        setSessionError(null); // Clear any errors if session exists
       } else {
+        // Session was deleted - only show error if we're not admin and had loaded the session from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasSessionParam = urlParams.has('session');
+        if (hasSessionParam && !isAdmin) {
+          setSessionError('This session has ended.');
+        }
         setCurrentSession(null);
         setShowResults(false);
       }
     });
 
     return () => unsubscribe();
-  }, [sessionId]);
+  }, [sessionId, isAdmin]);
 
   // Listen to votes
   useEffect(() => {
@@ -254,6 +271,36 @@ function PlanningPoker() {
     acc[team].push(vote);
     return acc;
   }, {});
+
+  // Show loading state while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-md:p-4 text-center">
+          <div className="text-6xl mb-4 animate-bounce">🎯</div>
+          <div className="text-xl text-gray-600">Loading session...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if session not found or error occurred
+  if (sessionError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-md:p-4 text-center">
+          <div className="text-6xl mb-4">❌</div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4 max-md:text-2xl">Session Not Found</h1>
+          <p className="text-gray-600 mb-6 max-md:text-sm">{sessionError}</p>
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 text-left">
+            <p className="text-sm text-gray-700">
+              <strong>Note:</strong> This session may have been ended by the admin, or the link may be incorrect.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show join form if session exists but user hasn't entered details yet
   if (currentSession && !isAdmin && (!userName || !selectedTeam)) {
