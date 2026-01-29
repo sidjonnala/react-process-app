@@ -18,6 +18,8 @@ function PlanningPoker() {
   const [ticketName, setTicketName] = useState('');
   const [sessionError, setSessionError] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [sessionFromUrl, setSessionFromUrl] = useState(false);
 
   // Check URL for session parameter
   useEffect(() => {
@@ -26,6 +28,7 @@ function PlanningPoker() {
     if (sessionParam) {
       const decodedSession = decodeURIComponent(sessionParam);
       setSessionId(decodedSession);
+      setSessionFromUrl(true);
       // Auto-load session to check if it exists
       checkAndLoadSession(decodedSession);
     }
@@ -60,9 +63,9 @@ function PlanningPoker() {
     return a.name.localeCompare(b.name);
   }).filter(team => team.name !== 'R&D Events'); // Exclude R&D Events
 
-  // Listen to current session
+  // Listen to current session (only if joined or admin)
   useEffect(() => {
-    if (!sessionId || !db) return;
+    if (!sessionId || !db || (!hasJoined && !isAdmin)) return;
 
     const unsubscribe = onSnapshot(doc(db, 'poker-sessions', sessionId), (docSnap) => {
       if (docSnap.exists()) {
@@ -84,11 +87,11 @@ function PlanningPoker() {
     });
 
     return () => unsubscribe();
-  }, [sessionId, isAdmin]);
+  }, [sessionId, isAdmin, hasJoined]);
 
-  // Listen to votes
+  // Listen to votes (only if joined or admin)
   useEffect(() => {
-    if (!sessionId || !db) return;
+    if (!sessionId || !db || (!hasJoined && !isAdmin)) return;
 
     const unsubscribe = onSnapshot(collection(db, 'poker-sessions', sessionId, 'votes'), (snapshot) => {
       const votesData = {};
@@ -99,7 +102,7 @@ function PlanningPoker() {
     });
 
     return () => unsubscribe();
-  }, [sessionId]);
+  }, [sessionId, hasJoined, isAdmin]);
 
   const startSession = async () => {
     if (!sessionId.trim()) {
@@ -115,6 +118,7 @@ function PlanningPoker() {
         team: selectedTeam
       });
       setIsAdmin(true);
+      setHasJoined(true);
     } catch (error) {
       console.error('Error starting session:', error);
       alert('Failed to start session. Make sure Firebase is configured.');
@@ -137,7 +141,8 @@ function PlanningPoker() {
         return;
       }
 
-      // Session found, set it as current
+      // Session found, mark as joined
+      setHasJoined(true);
       setCurrentSession(sessionSnap.data());
     } catch (error) {
       console.error('Error joining session:', error);
@@ -302,8 +307,8 @@ function PlanningPoker() {
     );
   }
 
-  // Show join form if session exists but user hasn't entered details yet
-  if (currentSession && !isAdmin && (!userName || !selectedTeam)) {
+  // Show join form if user accessed via session link but hasn't joined yet
+  if (sessionFromUrl && !isAdmin && !hasJoined) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-md:p-4">
@@ -340,13 +345,7 @@ function PlanningPoker() {
           </div>
 
           <button
-            onClick={() => {
-              if (!userName.trim() || !selectedTeam) {
-                alert('Please enter your name and select a team');
-                return;
-              }
-              // User info is set, the main UI will now show
-            }}
+            onClick={joinSession}
             disabled={!userName.trim() || !selectedTeam}
             className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed max-md:py-3 max-md:text-sm"
           >
@@ -433,6 +432,11 @@ function PlanningPoker() {
         </div>
       </div>
     );
+  }
+
+  // Only show poker interface if user has joined or is admin with an active session
+  if (!currentSession && !isAdmin) {
+    return null; // Shouldn't reach here, but just in case
   }
 
   return (
