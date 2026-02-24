@@ -10,6 +10,7 @@ A production-ready Node.js webhook API for receiving Azure DevOps Service Hooks.
 - ✅ **Automatically fetches old iteration path from ADO API** (when not provided in webhook)
 - ✅ **Validates if target iteration has started**
 - ✅ **Automatically reverts work items moved to started iterations**
+- ✅ **Board Manager bypass** - Designated users can add items to started iterations
 - ✅ **Adds informative comments to work items explaining the reversion**
 - ✅ Optional token-based security
 - ✅ Request logging middleware
@@ -19,26 +20,29 @@ A production-ready Node.js webhook API for receiving Azure DevOps Service Hooks.
 ## How It Works
 
 1. **Webhook receives iteration change** - Azure DevOps sends a webhook when a work item's iteration is changed
-2. **Validate iteration status** - API checks if the target iteration has already started
-3. **Auto-revert if started** - If the iteration has started, the work item is automatically moved back to its previous iteration
-4. **Notify user** - A comment is added to the work item explaining why the change was reverted and who to contact
+2. **Check if user is board manager** - Verify if the user making the change is in the board managers list
+3. **Validate iteration status** - API checks if the target iteration has already started
+4. **Board manager bypass** - If user is a board manager, allow the change even if iteration has started
+5. **Auto-revert if started** - If the iteration has started and user is NOT a board manager, the work item is automatically moved back to its previous iteration
+6. **Notify user** - A comment is added to the work item explaining why the change was reverted and who to contact
 
-This prevents users from adding work items to sprints that have already started, maintaining sprint integrity.
+This prevents regular users from adding work items to sprints that have already started, while allowing board managers to make necessary adjustments.
 
 ## Project Structure
 
 ```
 api/
-├── server.js                  # Entry point - Express server setup
+├── server.js                    # Entry point - Express server setup
 ├── routes/
-│   └── webhook.js             # Webhook route handler with validation logic
+│   └── webhook.js               # Webhook route handler with validation logic
 ├── services/
-│   ├── adoParser.js           # Azure DevOps payload parser
-│   ├── adoApiClient.js        # Azure DevOps REST API client
-│   └── iterationValidator.js  # Iteration validation and revert logic
-├── .env                       # Environment variables (gitignored)
-├── .env.example               # Example environment configuration
-└── README.md                  # This file
+│   ├── adoParser.js             # Azure DevOps payload parser
+│   ├── adoApiClient.js          # Azure DevOps REST API client
+│   ├── iterationValidator.js    # Iteration validation and revert logic
+│   └── boardManagerService.js   # Board manager authorization
+├── .env                         # Environment variables (gitignored)
+├── .env.example                 # Example environment configuration
+└── README.md                    # This file
 ```
 
 ## Prerequisites
@@ -73,7 +77,30 @@ WEBHOOK_SECRET=your-secret-token-here  # Optional but recommended
 # Required for validation and auto-revert functionality
 ADO_PAT=your-azure-devops-pat-here     # Get from https://dev.azure.com/{org}/_usersSettings/tokens
 BOARD_MANAGER_EMAIL=boardmanager@company.com  # Who to contact for sprint changes
+
+# Board Managers - Users who can bypass sprint protection
+BOARD_MANAGERS=boardmanager@company.com,scrum.master@company.com
 ```
+
+### Configuring Board Managers
+
+**Board managers** are users who can add work items to started iterations without being blocked. This is useful for Scrum Masters or project leads who need to make adjustments to active sprints.
+
+To configure board managers, set the `BOARD_MANAGERS` environment variable with a comma-separated list of user identifiers:
+
+```env
+BOARD_MANAGERS=sidharth@patagoniahealth.net,Sidharth Jonnala,jane.doe@company.com
+```
+
+**Important:** The system checks against multiple user identifiers from Azure DevOps:
+- Display Name (e.g., "Sidharth Jonnala")
+- Unique Name / Email (e.g., "sidharth@patagoniahealth.net")
+- Email address
+
+The comparison is **case-insensitive**, so these all match:
+- `sidharth@patagoniahealth.net`
+- `SIDHARTH@PATAGONIAHEALTH.NET`
+- `Sidharth@PatagoniaHealth.net`
 
 ### Getting an Azure DevOps Personal Access Token (PAT)
 
@@ -97,6 +124,7 @@ To enable this feature:
 |--------------|----------|
 | **No ADO_PAT** | Only logs changes, no validation or reversion |
 | **With ADO_PAT** | Validates iterations and auto-reverts changes to started sprints |
+| **With BOARD_MANAGERS** | Listed users can add items to started iterations (bypass protection) |
 | **With BOARD_MANAGER_EMAIL** | Users are directed to contact this person in reversion notices |
 
 ## Running Locally
@@ -278,7 +306,25 @@ Receives Azure DevOps work item update webhooks and validates iteration changes.
 }
 ```
 
-**Response when iteration HAS started (change reverted):**
+**Response when iteration HAS started but user is a BOARD MANAGER (change allowed):**
+```json
+{
+  "message": "Iteration change allowed - board manager override",
+  "action": "ALLOWED",
+  "reason": "User is a board manager",
+  "data": {
+    "workItemId": 12345,
+    "oldIterationPath": "Project\\Sprint 1",
+    "newIterationPath": "Project\\Sprint 2",
+    "changedBy": "Board Manager Name",
+    "changedDate": "2026-02-24T16:45:00Z",
+    "iterationStartDate": "2026-02-17T00:00:00Z",
+    "boardManagerOverride": true
+  }
+}
+```
+
+**Response when iteration HAS started and user is NOT a board manager (change reverted):**
 ```json
 {
   "message": "Iteration change prevented and reverted",
@@ -297,7 +343,21 @@ Receives Azure DevOps work item update webhooks and validates iteration changes.
 }
 ```
 
-**What happens when a work item is reverted:**
+**What happens in each scenario:**
+
+**Scenario 1: Iteration NOT started**
+- Change is allowed for all users
+- Work item stays in new iteration
+
+**Scenario 2: Iteration started + Board Manager**
+- Change is allowed (board manager bypass)
+- Work item stays in new iteration
+- No reversion or comments added
+
+**Scenario 3: Iteration started + Regular User**
+- Change is blocked and reverted
+- Work item automatically moved back to previous iteration
+- Comment added explaining reversion
 1. The work item is automatically moved back to its previous iteration
 2. A comment is added to the work item explaining the reversion
 3. The comment directs the user to contact the board manager if they need to add items to the current sprint

@@ -7,6 +7,7 @@ import {
   revertWorkItemIteration,
   addWorkItemComment 
 } from '../services/iterationValidator.js';
+import { isUserBoardManager, getBoardManagers } from '../services/boardManagerService.js';
 
 const router = express.Router();
 
@@ -165,7 +166,32 @@ router.post('/revertSprintChange', validateWebhookToken, async (req, res) => {
     const iterationStarted = hasIterationStarted(newIteration);
     
     if (iterationStarted) {
-      console.log('\n🚫 ITERATION HAS STARTED - REVERTING CHANGE');
+      console.log('\n🚫 ITERATION HAS STARTED');
+      
+      // Check if the user making the change is a board manager
+      const userIsBoardManager = isUserBoardManager(parsedData.changedBy);
+      
+      if (userIsBoardManager) {
+        console.log('✅ USER IS BOARD MANAGER - ALLOWING CHANGE');
+        console.log(`   User: ${parsedData.changedBy}`);
+        console.log(`   Board managers can add items to started iterations`);
+        console.log('='.repeat(80) + '\n');
+        
+        return res.status(200).json({ 
+          message: 'Iteration change allowed - board manager override',
+          action: 'ALLOWED',
+          reason: 'User is a board manager',
+          data: {
+            ...parsedData,
+            iterationStartDate: newIteration.startDate,
+            boardManagerOverride: true
+          }
+        });
+      }
+      
+      console.log('🚫 USER IS NOT BOARD MANAGER - REVERTING CHANGE');
+      console.log(`   User: ${parsedData.changedBy}`);
+      console.log(`   Configured board managers: ${getBoardManagers().join(', ')}`);
       
       const boardManagerEmail = process.env.BOARD_MANAGER_EMAIL || 'your board manager';
       const reason = `⚠️ <b>Iteration "${newIteration.name}" has already started!</b><br/><br/>` +
