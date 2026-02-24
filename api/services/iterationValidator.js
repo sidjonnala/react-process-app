@@ -10,67 +10,96 @@ import https from 'https';
  */
 export async function getIterationDetails(orgUrl, project, iterationPath, pat) {
   return new Promise((resolve, reject) => {
-    // Extract iteration path parts
-    // Path format: "ProjectName\IterationName" or "ProjectName\Parent\Child"
-    const pathParts = iterationPath.split('\\').filter(p => p);
-    
-    // Remove project name from path if present
-    const projectIndex = pathParts.findIndex(p => p.toLowerCase() === project.toLowerCase());
-    const iterationOnlyPath = projectIndex >= 0 
-      ? pathParts.slice(projectIndex + 1).join('\\')
-      : pathParts.slice(1).join('\\'); // Assume first part is project
-    
-    // Use Classification Nodes API to get iteration details
-    const encodedPath = encodeURIComponent(iterationOnlyPath || '');
-    const url = `${orgUrl}/${encodeURIComponent(project)}/_apis/wit/classificationnodes/iterations/${encodedPath}?api-version=7.0`;
-    
-    console.log(`🔍 Fetching iteration details for: ${iterationPath}`);
-    console.log(`   API URL: ${url}`);
-    
-    const auth = Buffer.from(`:${pat}`).toString('base64');
-    
-    const options = {
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+    try {
+      // Validate inputs
+      debugger;
+      if (!iterationPath || !project) {
+      
+        console.log('⚠️  Invalid iteration path or project name');
+        resolve(null);
+        return;
       }
-    };
-    
-    https.get(url, options, (res) => {
-      let data = '';
       
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
+      // Extract iteration path parts
+      // Path format: "ProjectName\IterationName" or "ProjectName\Parent\Child"
+      const pathParts = iterationPath.split('\\').filter(p => p && p.trim());
       
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          try {
-            const iteration = JSON.parse(data);
-            
-            resolve({
-              id: iteration.id,
-              name: iteration.name,
-              path: iteration.path,
-              startDate: iteration.attributes?.startDate || null,
-              finishDate: iteration.attributes?.finishDate || null,
-              timeFrame: getTimeFrame(iteration.attributes?.startDate, iteration.attributes?.finishDate)
-            });
-          } catch (error) {
-            console.error(`❌ Failed to parse iteration response: ${error.message}`);
-            reject(new Error(`Failed to parse iteration response: ${error.message}`));
-          }
-        } else {
-          console.log(`⚠️  API request failed with status ${res.statusCode}`);
-          console.log(`   Response: ${data}`);
-          resolve(null);
+      if (pathParts.length === 0) {
+        console.log('⚠️  Empty iteration path');
+        resolve(null);
+        return;
+      }
+      
+      // Remove project name from path if present
+      const projectIndex = pathParts.findIndex(p => 
+        p && project && p.toLowerCase() === project.toLowerCase()
+      );
+      
+      const iterationOnlyPath = projectIndex >= 0 
+        ? pathParts.slice(projectIndex + 1).join('\\')
+        : pathParts.slice(1).join('\\'); // Assume first part is project
+      
+      // If no iteration path after removing project, use the last part
+      const finalPath = iterationOnlyPath || pathParts[pathParts.length - 1];
+      
+      // Use Classification Nodes API to get iteration details
+      const encodedPath = encodeURIComponent(finalPath);
+      const url = `${orgUrl}/${encodeURIComponent(project)}/_apis/wit/classificationnodes/iterations/${encodedPath}?api-version=7.0`;
+      
+      console.log(`🔍 Fetching iteration details for: ${iterationPath}`);
+      console.log(`   Parsed path: ${finalPath}`);
+      console.log(`   API URL: ${url}`);
+      
+      const auth = Buffer.from(`:${pat}`).toString('base64');
+      
+      const options = {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
+      };
+      
+      https.get(url, options, (res) => {
+        let data = '';
+        
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const iteration = JSON.parse(data);
+              
+              resolve({
+                id: iteration.id,
+                name: iteration.name,
+                path: iteration.path,
+                startDate: iteration.attributes?.startDate || null,
+                finishDate: iteration.attributes?.finishDate || null,
+                timeFrame: getTimeFrame(iteration.attributes?.startDate, iteration.attributes?.finishDate)
+              });
+            } catch (error) {
+              console.error(`❌ Failed to parse iteration response: ${error.message}`);
+              resolve(null);
+            }
+          } else {
+            console.log(`⚠️  API request failed with status ${res.statusCode}`);
+            if (data) {
+              console.log(`   Response: ${data.substring(0, 200)}`);
+            }
+            resolve(null);
+          }
+        });
+      }).on('error', (error) => {
+        console.error(`❌ HTTP request error: ${error.message}`);
+        resolve(null);
       });
-    }).on('error', (error) => {
-      console.error(`❌ HTTP request error: ${error.message}`);
-      reject(error);
-    });
+    } catch (error) {
+      console.error(`❌ Error in getIterationDetails: ${error.message}`);
+      resolve(null);
+    }
   });
 }
 

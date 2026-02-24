@@ -92,17 +92,22 @@ router.post('/revertSprintChange', validateWebhookToken, async (req, res) => {
     if (parsedData.oldIterationPath === 'N/A (not provided in webhook)' || !parsedData.oldIterationPath) {
       console.log('\n🔄 Old iteration path not in webhook, fetching from API...');
       
-      const oldPath = await getPreviousIterationPath(
-        orgAndProject.orgUrl,
-        orgAndProject.project,
-        parsedData.workItemId,
-        process.env.ADO_PAT,
-        parsedData.newIterationPath
-      );
-      
-      if (oldPath) {
-        parsedData.oldIterationPath = oldPath;
+      if (orgAndProject) {
+        const oldPath = await getPreviousIterationPath(
+          orgAndProject.orgUrl,
+          orgAndProject.project,
+          parsedData.workItemId,
+          process.env.ADO_PAT,
+          parsedData.newIterationPath
+        );
+        
+        if (oldPath) {
+          parsedData.oldIterationPath = oldPath;
+        } else {
+          parsedData.oldIterationPath = 'N/A';
+        }
       } else {
+        console.log('⚠️  Cannot fetch old iteration - organization info not available');
         parsedData.oldIterationPath = 'N/A';
       }
     }
@@ -118,8 +123,22 @@ router.post('/revertSprintChange', validateWebhookToken, async (req, res) => {
     console.log(`🕐 Changed Date:       ${parsedData.changedDate}`);
     console.log('─'.repeat(80));
     
-    // Validate if the new iteration has started
+    // Validate if the new iteration has started (only if we have org info)
+    if (!orgAndProject) {
+      console.log('\n⚠️  Cannot validate iteration - organization info not available');
+      console.log('   Allowing change by default');
+      
+      return res.status(200).json({ 
+        message: 'Webhook received',
+        note: 'Cannot validate iteration - organization info missing',
+        data: parsedData
+      });
+    }
+    
     console.log('\n🔍 VALIDATING ITERATION STATUS...');
+    console.log(`   Organization URL: ${orgAndProject.orgUrl}`);
+    console.log(`   Project:          ${orgAndProject.TeamProject}`);
+    console.log(`   New Iteration:    ${parsedData.newIterationPath}`);
     
     const newIteration = await getIterationDetails(
       orgAndProject.orgUrl,

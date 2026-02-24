@@ -94,33 +94,63 @@ export async function getPreviousIterationPath(orgUrl, project, workItemId, pat,
  */
 export function extractOrgAndProject(payload) {
   try {
-    // Try to extract from resource URL
+    console.log('🔍 Extracting organization and project info...');
+    
+    // Try to extract from resourceContainers (most common in ADO webhooks)
     if (payload.resourceContainers) {
       const collection = payload.resourceContainers.collection;
       const project = payload.resourceContainers.project;
       
+      console.log(`   Found resourceContainers: collection=${!!collection}, project=${!!project}`);
+      
       if (collection && project) {
-        return {
-          orgUrl: collection.baseUrl,
-          project: project.name
-        };
+        // Project can have different properties: name, id, or be a string itself
+        let projectName = project.name || project.id || project;
+        
+        // If project is an object but doesn't have name/id, log its structure
+        if (typeof project === 'object' && !projectName) {
+          console.log('   Project object keys:', Object.keys(project));
+          projectName = project.Name || project.ProjectName;
+        }
+        
+        if (collection.baseUrl && projectName) {
+          const result = {
+            orgUrl: collection.baseUrl,
+            project: projectName
+          };
+          console.log(`✅ Extracted from resourceContainers: ${result.orgUrl}/${result.project}`);
+          return result;
+        }
       }
     }
     
     // Try to extract from resource._links
     if (payload.resource?._links?.self?.href) {
       const url = payload.resource._links.self.href;
+      console.log(`   Trying to extract from _links.self.href: ${url}`);
+      
       const match = url.match(/(https:\/\/dev\.azure\.com\/[^\/]+)\/([^\/]+)\/_apis/);
       
       if (match) {
-        return {
+        const result = {
           orgUrl: match[1],
           project: decodeURIComponent(match[2])
         };
+        console.log(`✅ Extracted from _links: ${result.orgUrl}/${result.project}`);
+        return result;
       }
     }
     
     console.log('⚠️  Could not extract organization and project from payload');
+    console.log('   Payload structure:', JSON.stringify({
+      hasResourceContainers: !!payload.resourceContainers,
+      resourceContainersKeys: payload.resourceContainers ? Object.keys(payload.resourceContainers) : [],
+      projectType: payload.resourceContainers?.project ? typeof payload.resourceContainers.project : 'N/A',
+      projectValue: payload.resourceContainers?.project,
+      hasResourceLinks: !!payload.resource?._links,
+      resourceKeys: payload.resource ? Object.keys(payload.resource) : []
+    }, null, 2));
+    
     return null;
     
   } catch (error) {
