@@ -12,6 +12,7 @@ A production-ready Node.js webhook API for receiving Azure DevOps Service Hooks.
 - ✅ **Automatically reverts work items moved to started iterations**
 - ✅ **Board Manager bypass** - Designated users can add items to started iterations
 - ✅ **Adds informative comments to work items explaining the reversion**
+- ✅ **Google Chat notifications** - Posts a card to a Google Chat space when a User Story is created under a target area path
 - ✅ Optional token-based security
 - ✅ Request logging middleware
 - ✅ Modular, cloud-ready architecture
@@ -34,7 +35,8 @@ This prevents regular users from adding work items to sprints that have already 
 api/
 ├── server.js                    # Entry point - Express server setup
 ├── routes/
-│   └── webhook.js               # Webhook route handler with validation logic
+│   ├── webhook.js               # Sprint protection webhook handler
+│   └── googleChatNotifier.js    # Google Chat notification handler
 ├── services/
 │   ├── adoParser.js             # Azure DevOps payload parser
 │   ├── adoApiClient.js          # Azure DevOps REST API client
@@ -74,12 +76,16 @@ PORT=3000
 NODE_ENV=development
 WEBHOOK_SECRET=your-secret-token-here  # Optional but recommended
 
-# Required for validation and auto-revert functionality
+# Required for iteration validation and auto-revert functionality
 ADO_PAT=your-azure-devops-pat-here     # Get from https://dev.azure.com/{org}/_usersSettings/tokens
 BOARD_MANAGER_EMAIL=boardmanager@company.com  # Who to contact for sprint changes
 
 # Board Managers - Users who can bypass sprint protection
 BOARD_MANAGERS=boardmanager@company.com,scrum.master@company.com
+
+# Google Chat Notifier — required for /api/notifyGoogleChat
+GOOGLE_CHAT_WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=...
+TARGET_AREA_PATH=MyProject\\Hotfix     # ADO area path prefix to watch (use double backslash)
 ```
 
 ### Configuring Board Managers
@@ -230,7 +236,9 @@ ngrok http 3000
 
 4. ngrok will provide a public URL like: `https://abc123.ngrok.io`
 
-5. Use this URL in Azure DevOps: `https://abc123.ngrok.io/api/revertSprintChange`
+5. Use the public URL in Azure DevOps service hooks:
+   - Sprint protection: `https://abc123.ngrok.io/api/revertSprintChange`
+   - Google Chat notifier: `https://abc123.ngrok.io/api/notifyGoogleChat`
 
 **Note:** Keep both terminal windows open while testing.
 
@@ -282,6 +290,52 @@ ngrok http 3000
 | **Resource version** | Latest |
 
 ## API Endpoints
+
+### POST /api/notifyGoogleChat
+
+Receives ADO `workitem.created` service hook payloads. Sends a Google Chat card notification when a **User Story** is created under the configured area path prefix.
+
+**Required env vars:** `GOOGLE_CHAT_WEBHOOK_URL`, `TARGET_AREA_PATH`
+
+**Headers:**
+- `Content-Type: application/json` (required)
+
+**Filters applied (in order):**
+1. `eventType` must be `workitem.created` — all other events return 200 and are silently ignored
+2. `System.WorkItemType` must be `User Story`
+3. `System.AreaPath` must start with `TARGET_AREA_PATH` (case-insensitive)
+
+**Response on successful notification:**
+```json
+{ "message": "Notification sent." }
+```
+
+**Response when event/type/path does not match (no notification sent):**
+```json
+{ "message": "Event ignored." }
+{ "message": "Not a User Story." }
+{ "message": "Area path does not match." }
+```
+
+#### Setting up the ADO service hook
+
+1. Go to **Project Settings → Service hooks → Create subscription**
+2. Select **Web Hooks**, click **Next**
+3. Set **Event** to `Work item created`
+4. Optionally filter by **Area path** and **Work item type** in ADO as a first-pass filter
+5. Set the **URL** to `https://<your-ngrok-url>/api/notifyGoogleChat`
+6. Set **Resource details to send** to `All`, click **Finish**
+
+#### Getting a Google Chat webhook URL
+
+1. Open the target Google Chat space
+2. Click the space name → **Manage webhooks** → **Add webhook**
+3. Give it a name, copy the generated URL
+4. Set it as `GOOGLE_CHAT_WEBHOOK_URL` in `api/.env`
+
+> **Note on `TARGET_AREA_PATH`:** ADO area paths use single backslashes (`MyProject\Hotfix`). In `.env` files backslashes must be doubled: `TARGET_AREA_PATH=MyProject\\Hotfix`.
+
+---
 
 ### POST /api/revertSprintChange
 Receives Azure DevOps work item update webhooks and validates iteration changes.
