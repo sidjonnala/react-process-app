@@ -89,7 +89,7 @@ router.post('/notifyGoogleChat', async (req, res) => {
         cardId: `ado-userstory-${workItemId}`,
         card: {
           header: {
-            title: `New User Story #${workItemId}`,
+            title: `New User Story #${workItemId} created`,
             subtitle: areaPath,
             imageUrl: 'https://cdn.vsassets.io/content/icons/favicon.ico',
             imageType: 'CIRCLE',
