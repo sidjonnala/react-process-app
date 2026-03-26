@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import webhookRouter from './routes/webhook.js';
+import googleChatNotifierRouter from './routes/googleChatNotifier.js';
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', webhookRouter);
+app.use('/api', googleChatNotifierRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
